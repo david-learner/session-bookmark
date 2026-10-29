@@ -1,5 +1,5 @@
-# README 시연 GIF. 저장소 루트에서 실행한다: vhs demo/demo.tape
-Output docs/demo.gif
+# README 시연 GIF (ko). 저장소 루트에서 실행한다: vhs demo/demo.ko.tape
+Output docs/demo.ko.gif
 
 Set Shell zsh
 Set FontFamily "D2Coding"
@@ -14,7 +14,7 @@ Set TypingSpeed 90ms
 Hide
 Type "exec env -i TERM=xterm-256color LANG=ko_KR.UTF-8 zsh -f" Enter
 Sleep 500ms
-Type "source demo/setup.sh && clear" Enter
+Type "source demo/setup.sh ko && clear" Enter
 Sleep 500ms
 Show
 

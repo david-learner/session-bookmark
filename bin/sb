@@ -1,17 +1,6 @@
 #!/usr/bin/env zsh
 # sb — session bookmark: Claude Code / Codex 세션을 북마크해 두고 fzf 로 골라 다시 들어간다.
-#
-#   sb                 북마크 목록(fzf). enter=세션 진입, ctrl-d=북마크 제거
-#   sb add             최근 세션 목록(fzf)에서 골라 북마크 추가
-#   sb add -p claude|codex [-n 이름] [-m 메모] [-d 작업경로] <session-id>
-#   sb rm [session-id] 북마크 제거 (인자 없으면 fzf 로 고름)
-#   sb go <session-id> 해당 북마크 세션으로 바로 진입
-#
-# 진입 명령: claude → `claude --resume <id>`, codex → `codex resume <id>`.
-# 옵션을 붙이려면 설정 파일(~/.config/session-bookmark/config)이나 환경 변수에
-# SB_CLAUDE_CMD / SB_CODEX_CMD 를 적는다. 셸 별칭은 풀리지 않으니 별칭의 내용을 적는다.
-#   SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
-# 저장 위치: ${SB_FILE:-~/.local/share/session-bookmark/bookmarks.jsonl}
+# 사용법은 `sb help`, 자세한 설명은 README 에 있다.
 
 emulate -L zsh
 setopt pipe_fail no_nomatch
@@ -22,11 +11,21 @@ SB_CONFIG=${SB_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/session-bookmark/config
 
 # 우선순위: 환경 변수 > 설정 파일 > 기본값
 () {
-  local env_claude=${SB_CLAUDE_CMD-} env_codex=${SB_CODEX_CMD-}
+  local env_claude=${SB_CLAUDE_CMD-} env_codex=${SB_CODEX_CMD-} env_lang=${SB_LANG-}
   [[ -f $SB_CONFIG ]] && source $SB_CONFIG
   SB_CLAUDE_CMD=${env_claude:-${SB_CLAUDE_CMD:-claude}}
   SB_CODEX_CMD=${env_codex:-${SB_CODEX_CMD:-codex}}
+  SB_LANG=${env_lang:-${SB_LANG:-}}
 }
+
+# 화면 언어: SB_LANG(ko|en)이 없으면 로캘이 한국어일 때만 한국어로 보인다.
+if [[ $SB_LANG != (ko|en) ]]; then
+  [[ ${LC_ALL:-${LC_MESSAGES:-$LANG}} == ko* ]] && SB_LANG=ko || SB_LANG=en
+fi
+export SB_LANG  # fzf 가 부르는 sb _preview 도 같은 언어를 쓰게 한다.
+
+# 언어별 문구: msg '한국어' 'English'
+msg() { [[ $SB_LANG == ko ]] && print -rn -- "$1" || print -rn -- "$2" }
 
 CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-$HOME/.claude}
 CODEX_DIR=${CODEX_HOME:-$HOME/.codex}
@@ -36,7 +35,7 @@ die() { print -u2 -- "sb: $*"; exit 1 }
 
 now() { date '+%Y-%m-%d %H:%M' }
 
-need() { for c in "$@"; do command -v $c >/dev/null || die "$c 가 필요합니다"; done }
+need() { for c in "$@"; do command -v $c >/dev/null || die "$(msg "$c 가 필요합니다" "$c is required")"; done }
 
 init_store() {
   mkdir -p ${SB_FILE:h}
@@ -52,7 +51,7 @@ resume_cmd() {
   case $1 in
     claude) print -r -- "$SB_CLAUDE_CMD --resume $2" ;;
     codex)  print -r -- "$SB_CODEX_CMD resume $2" ;;
-    *)      die "알 수 없는 provider: $1" ;;
+    *)      die "$(msg "알 수 없는 provider: $1" "unknown provider: $1")" ;;
   esac
 }
 
@@ -112,31 +111,39 @@ LIST_FZF_OPTS=(--delimiter=$'\t' --with-nth=6,7 --no-hscroll --ellipsis= --layou
 
 cmd_preview() {
   local b=$(get_bookmark "$1")
-  [[ -n $b ]] || { print "(북마크 없음)"; return }
+  [[ -n $b ]] || { msg "(북마크 없음)" "(no bookmark)"; print; return }
   local provider=$(jq -r .provider <<< $b) cwd=$(jq -r '.cwd // ""' <<< $b)
-  jq -r --arg home "$HOME" '
-    "이름      \(.name)",
-    "provider  \(.provider)",
-    "세션 ID   \(.session_id)",
-    "작업 경로 \(.cwd // "-" | if startswith($home + "/") then "~" + .[($home | length):] else . end)",
-    "북마크일  \(.created_at)",
-    "최근 진입 \(.last_opened_at // "없음")",
+  local -a L
+  if [[ $SB_LANG == ko ]]; then
+    L=("이름      " "provider  " "세션 ID   " "작업 경로 " "북마크일  " "최근 진입 " "없음" "메모" "(없음)")
+  else
+    L=("Name      " "Provider  " "Session   " "Folder    " "Created   " "Last open " "never" "Memo" "(none)")
+  fi
+  jq -r --arg home "$HOME" --args '
+    "\($ARGS.positional[0])\(.name)",
+    "\($ARGS.positional[1])\(.provider)",
+    "\($ARGS.positional[2])\(.session_id)",
+    "\($ARGS.positional[3])\(.cwd // "-" | if startswith($home + "/") then "~" + .[($home | length):] else . end)",
+    "\($ARGS.positional[4])\(.created_at)",
+    "\($ARGS.positional[5])\(.last_opened_at // $ARGS.positional[6])",
     "",
-    "메모",
+    $ARGS.positional[7],
     "────",
-    (.memo // "" | if . == "" then "(없음)" else . end)' <<< $b
+    (.memo // "" | if . == "" then $ARGS.positional[8] else . end)' "${L[@]}" <<< $b
   print
   if [[ -n $cwd && ! -d $cwd ]]; then
-    print "⚠ 작업 경로가 없습니다. 진입하면 빈 폴더를 만들지, 현재 폴더에서 열지 묻습니다."
+    msg "⚠ 작업 경로가 없습니다. 진입하면 빈 폴더를 만들지, 현재 폴더에서 열지 묻습니다." \
+        "⚠ The folder no longer exists. You will be asked to create an empty one or use the current folder."
+    print
   fi
-  print "진입 명령: $(resume_cmd $provider ${1})"
+  print "$(msg "진입 명령" "Resume"): $(resume_cmd $provider ${1})"
 }
 
 cmd_list() {
-  [[ -s $SB_FILE ]] || { print "북마크가 없습니다. 'sb add' 로 추가하세요."; return }
+  [[ -s $SB_FILE ]] || { msg "북마크가 없습니다. 'sb add' 로 추가하세요." "No bookmarks yet. Add one with 'sb add'."; print; return }
   local sel
   sel=$(list_rows | fzf $LIST_FZF_OPTS \
-    --header='enter: 세션 진입 · ctrl-d: 북마크 제거 · esc: 닫기' \
+    --header="$(msg 'enter: 세션 진입 · ctrl-d: 북마크 제거 · esc: 닫기' 'enter: resume · ctrl-d: delete · esc: close')" \
     --preview="$SB_SELF _preview {1}" \
     --preview-window='down,45%,wrap' \
     --bind="ctrl-d:execute-silent($SB_SELF rm --yes {1})+reload($SB_SELF _rows)") || return 0
@@ -146,21 +153,21 @@ cmd_list() {
 # ── 세션 진입 ─────────────────────────────────────────────
 
 cmd_go() {
-  [[ -n $1 ]] || die "세션 id 를 주세요"
+  [[ -n $1 ]] || die "$(msg "세션 id 를 주세요" "a session id is required")"
   local b=$(get_bookmark "$1")
-  [[ -n $b ]] || die "북마크가 없습니다: $1"
+  [[ -n $b ]] || die "$(msg "북마크가 없습니다: $1" "no such bookmark: $1")"
   local provider=$(jq -r .provider <<< $b) cwd=$(jq -r '.cwd // ""' <<< $b)
   if [[ -n $cwd ]]; then
     if [[ -d $cwd ]]; then
       cd $cwd
     else
       # 세션은 ID 로 찾으므로 어느 폴더에서든 열린다(Claude Code 2.1.312 에서 확인). 폴더는 이어서 작업할 곳만 정한다.
-      print -u2 "sb: 세션을 연 폴더가 없습니다: ${cwd/#$HOME\//~/}"
-      print -u2 "sb: 빈 폴더를 만들면 대화는 이어지지만, 코드와 git 은 없습니다."
-      local ans
-      if read -q "ans?빈 폴더를 만들고 열까요? (N 이면 현재 폴더에서 엽니다) [y/N] " < /dev/tty; then
+      print -u2 "sb: $(msg "세션을 연 폴더가 없습니다" "the session's folder no longer exists"): ${cwd/#$HOME\//~/}"
+      print -u2 "sb: $(msg "빈 폴더를 만들면 대화는 이어지지만, 코드와 git 은 없습니다." "An empty folder keeps the conversation, but has no code or git.")"
+      local ans prompt=$(msg "빈 폴더를 만들고 열까요? (N 이면 현재 폴더에서 엽니다) [y/N] " "Create an empty folder and open it there? (N opens it in the current folder) [y/N] ")
+      if read -q "ans?$prompt" < /dev/tty; then
         print -u2
-        mkdir -p $cwd || die "폴더를 만들지 못했습니다: $cwd"
+        mkdir -p $cwd || die "$(msg "폴더를 만들지 못했습니다: $cwd" "could not create the folder: $cwd")"
         cd $cwd
       else
         print -u2
@@ -201,7 +208,7 @@ recent_rows() {
       [[ -n $title ]] || title=$(grep -m1 '"type":"user_message"' $f | jq -r '.payload.message | gsub("\\s+"; " ") | .[0:60]' 2>/dev/null)
     fi
     title=${title//[[:cntrl:]]/ }
-    print -r -- "$p"$'\t'"$id"$'\t'"$cwd"$'\t'"$title"$'\t'"$(display_row "$(date -r $m '+%m-%d %H:%M')" "$p" "${title:-(제목 없음)}" "${cwd/#$HOME/~}")"
+    print -r -- "$p"$'\t'"$id"$'\t'"$cwd"$'\t'"$title"$'\t'"$(display_row "$(date -r $m '+%m-%d %H:%M')" "$p" "${title:-$(msg "(제목 없음)" "(untitled)")}" "${cwd/#$HOME/~}")"
   done
 }
 
@@ -230,7 +237,7 @@ cmd_add() {
   while getopts "p:n:m:d:" opt; do
     case $opt in
       p) provider=$OPTARG ;; n) name=$OPTARG ;; m) memo=$OPTARG ;; d) cwd=$OPTARG ;;
-      *) die "사용법: sb add [-p claude|codex] [-n 이름] [-m 메모] [-d 작업경로] [session-id]" ;;
+      *) die "$(msg "사용법: sb add [-p claude|codex] [-n 이름] [-m 메모] [-d 작업경로] [session-id]" "usage: sb add [-p claude|codex] [-n name] [-m memo] [-d folder] [session-id]")" ;;
     esac
   done
   shift $((OPTIND - 1))
@@ -241,8 +248,8 @@ cmd_add() {
     sel=$(recent_rows | fzf \
       --delimiter=$'\t' --with-nth=5 \
       --layout=reverse --height=100% \
-      --header='북마크할 세션을 고르세요 (최근 수정 순)' \
-      --preview='printf "provider  %s\n세션 ID   %s\n작업 경로 %s\n제목      %s\n" {1} {2} {3} {4}' \
+      --header="$(msg '북마크할 세션을 고르세요 (최근 수정 순)' 'Pick a session to bookmark (most recent first)')" \
+      --preview="printf '%s\n' 'provider  '{1} '$(msg '세션 ID   ' 'Session   ')'{2} '$(msg '작업 경로 ' 'Folder    ')'{3} '$(msg '제목      ' 'Title     ')'{4}" \
       --preview-window='down,30%,wrap') || return 0
     [[ -n $sel ]] || return 0
     local -a f=("${(@s:	:)sel}")
@@ -250,7 +257,7 @@ cmd_add() {
     [[ -n $name ]] || name=$f[4]
   fi
 
-  [[ $id == ?*-?*-?*-?*-?* ]] || die "세션 id 형식이 아닙니다: $id"
+  [[ $id == ?*-?*-?*-?*-?* ]] || die "$(msg "세션 id 형식이 아닙니다: $id" "not a session id: $id")"
   # 세션 기록을 찾아 provider 와 세션을 연 폴더를 알아낸다. 실행한 폴더($PWD)는 세션 폴더와 다를 수 있다.
   local -a claude_f codex_f
   [[ $provider == codex ]] || claude_f=($CLAUDE_DIR/projects/*/$id.jsonl(N))
@@ -262,12 +269,12 @@ cmd_add() {
     provider=codex
     [[ -n $cwd ]] || cwd=$(head -1 $codex_f[1] | jq -r '.payload.cwd // empty')
   elif [[ -z $provider ]]; then
-    die "세션을 찾지 못했습니다. -p claude|codex 로 지정하세요: $id"
+    die "$(msg "세션을 찾지 못했습니다. -p claude|codex 로 지정하세요: $id" "session not found; specify -p claude|codex: $id")"
   fi
-  [[ $provider == (claude|codex) ]] || die "provider 는 claude 또는 codex 입니다: $provider"
+  [[ $provider == (claude|codex) ]] || die "$(msg "provider 는 claude 또는 codex 입니다: $provider" "provider must be claude or codex: $provider")"
   if [[ -z $cwd ]]; then
     cwd=$PWD
-    print -u2 "sb: 세션 기록에서 작업 경로를 찾지 못해 현재 폴더를 저장합니다: $cwd"
+    print -u2 "sb: $(msg "세션 기록에서 작업 경로를 찾지 못해 현재 폴더를 저장합니다" "no folder found in the session record; saving the current folder"): $cwd"
   fi
 
   # 이미 북마크한 세션이면 기존 이름·메모를 기본값으로 둔다.
@@ -278,13 +285,13 @@ cmd_add() {
   fi
 
   if [[ -t 0 ]]; then
-    vared -p '이름: ' name
-    vared -p '메모: ' memo
+    vared -p "$(msg '이름: ' 'Name: ')" name
+    vared -p "$(msg '메모: ' 'Memo: ')" memo
   fi
   [[ -n $name ]] || name=${id[1,8]}
 
   save_bookmark $provider $id "$name" "$cwd" "$memo"
-  print "$([[ -n $existed ]] && print 갱신 || print 추가): [$provider] $name ($id)"
+  print "$([[ -n $existed ]] && msg 갱신 Updated || msg 추가 Added): [$provider] $name ($id)"
 }
 
 # ── 북마크 제거 ─────────────────────────────────────────────
@@ -294,23 +301,59 @@ cmd_rm() {
   [[ $1 == --yes ]] && { yes=1; shift }
   local id=$1
   if [[ -z $id ]]; then
-    [[ -s $SB_FILE ]] || { print "북마크가 없습니다."; return }
+    [[ -s $SB_FILE ]] || { msg "북마크가 없습니다." "No bookmarks."; print; return }
     local sel
     sel=$(list_rows | fzf $LIST_FZF_OPTS \
-      --header='제거할 북마크를 고르세요' \
+      --header="$(msg '제거할 북마크를 고르세요' 'Pick a bookmark to delete')" \
       --preview="$SB_SELF _preview {1}" --preview-window='down,45%,wrap') || return 0
     id=${sel%%$'\t'*}
   fi
   local b=$(get_bookmark "$id")
-  [[ -n $b ]] || die "북마크가 없습니다: $id"
+  [[ -n $b ]] || die "$(msg "북마크가 없습니다: $id" "no such bookmark: $id")"
   if (( ! yes )); then
-    local ans
-    read -q "ans?제거할까요? $(jq -r .name <<< $b) [y/N] " || { print; return }
+    local ans prompt="$(msg "제거할까요?" "Delete?") $(jq -r .name <<< $b) [y/N] "
+    read -q "ans?$prompt" || { print; return }
     print
   fi
   local tmp=$(mktemp)
   jq -c --arg id "$id" 'select(.session_id != $id)' $SB_FILE > $tmp && mv $tmp $SB_FILE
-  (( yes )) || print "제거: $(jq -r .name <<< $b)"
+  (( yes )) || print "$(msg 제거 Deleted): $(jq -r .name <<< $b)"
+}
+
+# ── 도움말 ───────────────────────────────────────────────
+
+cmd_help() {
+  if [[ $SB_LANG == ko ]]; then
+    cat <<'EOF'
+sb — Claude Code / Codex 세션을 북마크해 두고 골라서 다시 들어갑니다.
+
+  sb                 북마크 목록. enter=세션 진입, ctrl-d=북마크 제거
+  sb add             최근 세션 목록에서 골라 북마크 추가
+  sb add -p claude|codex [-n 이름] [-m 메모] [-d 작업경로] <session-id>
+  sb rm [session-id] 북마크 제거 (인자 없으면 목록에서 고름)
+  sb go <session-id> 해당 북마크 세션으로 바로 진입
+
+설정: ~/.config/session-bookmark/config
+  SB_CLAUDE_CMD="claude --permission-mode acceptEdits"   진입 명령 (별칭 이름은 안 됨)
+  SB_CODEX_CMD="codex --search"
+  SB_LANG=ko                                             화면 언어 (ko|en)
+EOF
+  else
+    cat <<'EOF'
+sb — bookmark Claude Code / Codex sessions and jump back into them.
+
+  sb                 Bookmark list. enter=resume, ctrl-d=delete
+  sb add             Pick a recent session and bookmark it
+  sb add -p claude|codex [-n name] [-m memo] [-d folder] <session-id>
+  sb rm [session-id] Delete a bookmark (pick from the list if no ID)
+  sb go <session-id> Resume that bookmarked session directly
+
+Config: ~/.config/session-bookmark/config
+  SB_CLAUDE_CMD="claude --permission-mode acceptEdits"   resume command (no alias names)
+  SB_CODEX_CMD="codex --search"
+  SB_LANG=en                                             screen language (ko|en)
+EOF
+  fi
 }
 
 # ── main ────────────────────────────────────────────────
@@ -326,6 +369,6 @@ case ${1:-ls} in
   _preview)     cmd_preview "$2" ;;
   _rows)        list_rows ;;
   _recent)      recent_rows ;;
-  -h|--help|help) awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' $SB_SELF ;;
-  *)            die "알 수 없는 명령: $1 (sb help)" ;;
+  -h|--help|help) cmd_help ;;
+  *)            die "$(msg "알 수 없는 명령: $1 (sb help)" "unknown command: $1 (see sb help)")" ;;
 esac
