@@ -86,25 +86,8 @@ sb add             최근 세션 목록에서 골라 북마크 추가
 sb add -p claude|codex [-n 이름] [-m 메모] [-d 작업경로] <session-id>
 sb rm [session-id] 북마크 제거 (인자 없으면 목록에서 고름)
 sb go <session-id> 해당 북마크 세션으로 바로 진입
-sb prune <일수>    그 일수 동안 sb 로 들어가지 않은 북마크를 골라 제거
 sb help
 ```
-
-### 오래 안 쓴 북마크 정리
-
-`sb` 로 세션에 들어갈 때마다 그 시각을 「최근 진입」으로 기록합니다. `sb prune 30` 은 30일 넘게 들어가지 않은 북마크를 보여 주고, 확인을 받은 뒤 지웁니다.
-
-```
-$ sb prune 30
-30일 넘게 들어가지 않은 북마크 (2개, 기준 2026-09-29 15:07 이전):
-  2026-08-15 10:00  [claude] 주문 목록 느린 원인
-  들어간 적 없음 (북마크 2026-08-01 10:00)  [codex] 블로그 검색 기능 설계
-모두 제거할까요? [y/N]
-```
-
-- 한 번도 들어가지 않은 북마크는 북마크한 날을 기준으로 봅니다.
-- `sb` 를 거치지 않고 `claude --resume` 으로 직접 들어간 것은 기록되지 않습니다.
-- 확인 없이 지우려면 `sb prune --yes 30` 을 쓰세요.
 
 ## 세션을 연 폴더가 지워졌다면
 
@@ -143,7 +126,7 @@ SB_CODEX_CMD="codex -s workspace-write -a on-request"
 
 ## 북마크 파일
 
-`~/.local/share/session-bookmark/bookmarks.jsonl` 에 한 줄에 북마크 하나씩 JSON 으로 저장합니다.
+`~/.local/share/session-bookmark/bookmarks.jsonl` 에 한 줄에 북마크 하나씩 JSON 으로 저장합니다. `last_opened_at` 은 `sb` 로 세션에 들어간 마지막 시각입니다. `sb` 를 거치지 않고 직접 `--resume` 한 것은 기록되지 않습니다.
 
 ```json
 {"provider":"claude","name":"결제 흐름 논의","session_id":"0957a7cc-…","cwd":"/Users/me/project","created_at":"2026-10-29 14:12","memo":"내일 이어서","last_opened_at":"2026-10-30 09:05"}

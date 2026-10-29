@@ -6,7 +6,6 @@
 #   sb add -p claude|codex [-n 이름] [-m 메모] [-d 작업경로] <session-id>
 #   sb rm [session-id] 북마크 제거 (인자 없으면 fzf 로 고름)
 #   sb go <session-id> 해당 북마크 세션으로 바로 진입
-#   sb prune <일수>    그 일수 동안 sb 로 들어가지 않은 북마크를 골라 제거
 #
 # 진입 명령: claude → `claude --resume <id>`, codex → `codex resume <id>`.
 # 옵션을 붙이려면 설정 파일(~/.config/session-bookmark/config)이나 환경 변수에
@@ -219,7 +218,7 @@ save_bookmark() { # provider id name cwd memo
   mv $tmp $SB_FILE
 }
 
-# sb 로 세션에 들어간 시각을 남긴다. 오래 안 쓴 북마크를 가르는 기준이다(sb prune).
+# sb 로 세션에 들어간 시각을 남긴다. 나중에 오래 안 쓴 북마크를 가르는 기준으로 쓴다.
 touch_bookmark() {
   local tmp=$(mktemp)
   jq -c --arg id "$1" --arg at "$(now)" \
@@ -290,31 +289,6 @@ cmd_add() {
 
 # ── 북마크 제거 ─────────────────────────────────────────────
 
-# ── 오래된 북마크 정리 ─────────────────────────────────────
-
-# 마지막 진입(없으면 북마크한 날)이 <일수> 일 전보다 이른 북마크를 보여 주고, 확인 뒤 지운다.
-cmd_prune() {
-  local yes=0
-  [[ $1 == --yes ]] && { yes=1; shift }
-  [[ $1 == <1-> ]] || die "사용법: sb prune [--yes] <일수>   예: sb prune 30"
-  local cutoff=$(date -v-${1}d '+%Y-%m-%d %H:%M')
-  local stale=$(jq -c --arg c "$cutoff" 'select((.last_opened_at // .created_at) < $c)' $SB_FILE)
-  if [[ -z $stale ]]; then
-    print "$1일 넘게 들어가지 않은 북마크가 없습니다."
-    return
-  fi
-  print "$1일 넘게 들어가지 않은 북마크 ($(wc -l <<< $stale | tr -d ' ')개, 기준 $cutoff 이전):"
-  jq -r '"  \(.last_opened_at // "들어간 적 없음 (북마크 \(.created_at))")  [\(.provider)] \(.name)"' <<< $stale
-  if (( ! yes )); then
-    local ans
-    read -q "ans?모두 제거할까요? [y/N] " < /dev/tty || { print; print "제거하지 않았습니다."; return }
-    print
-  fi
-  local tmp=$(mktemp)
-  jq -c --arg c "$cutoff" 'select((.last_opened_at // .created_at) >= $c)' $SB_FILE > $tmp && mv $tmp $SB_FILE
-  print "제거했습니다."
-}
-
 cmd_rm() {
   local yes=0
   [[ $1 == --yes ]] && { yes=1; shift }
@@ -349,7 +323,6 @@ case ${1:-ls} in
   add|a)        shift; cmd_add "$@" ;;
   rm|remove|del) shift; cmd_rm "$@" ;;
   go)           shift; cmd_go "$@" ;;
-  prune)        shift; cmd_prune "$@" ;;
   _preview)     cmd_preview "$2" ;;
   _rows)        list_rows ;;
   _recent)      recent_rows ;;
