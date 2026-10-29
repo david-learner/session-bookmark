@@ -107,8 +107,8 @@ sb help
 `~/.config/session-bookmark/config` 에 세션 진입 명령을 적습니다. 비워 두면 `claude`·`codex` 를 그대로 씁니다.
 
 ```bash
-SB_CLAUDE_CMD="claude --dangerously-skip-permissions"
-SB_CODEX_CMD="codex -s workspace-write -a on-request"
+SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
+SB_CODEX_CMD="codex --search"
 ```
 
 - ⚠️ 셸 별칭 이름(`cc` 등)을 적지 마세요. `sb` 는 셸 설정을 읽지 않아 별칭이 풀리지 않습니다. 별칭의 내용을 적으세요.
@@ -129,7 +129,7 @@ SB_CODEX_CMD="codex -s workspace-write -a on-request"
 `~/.local/share/session-bookmark/bookmarks.jsonl` 에 한 줄에 북마크 하나씩 JSON 으로 저장합니다. `last_opened_at` 은 `sb` 로 세션에 들어간 마지막 시각입니다. `sb` 를 거치지 않고 직접 `--resume` 한 것은 기록되지 않습니다.
 
 ```json
-{"provider":"claude","name":"결제 흐름 논의","session_id":"0957a7cc-…","cwd":"/Users/me/project","created_at":"2026-10-29 14:12","memo":"내일 이어서","last_opened_at":"2026-10-30 09:05"}
+{"provider":"claude","name":"결제 흐름 논의","session_id":"5f0c2a9e-7d41-4b8e-9c3a-2e6f1b8d4a70","cwd":"/Users/me/project","created_at":"2026-10-29 14:12","memo":"내일 이어서","last_opened_at":"2026-10-30 09:05"}
 ```
 
 ## 시연 GIF 다시 만들기

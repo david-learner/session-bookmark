@@ -10,7 +10,7 @@
 # 진입 명령: claude → `claude --resume <id>`, codex → `codex resume <id>`.
 # 옵션을 붙이려면 설정 파일(~/.config/session-bookmark/config)이나 환경 변수에
 # SB_CLAUDE_CMD / SB_CODEX_CMD 를 적는다. 셸 별칭은 풀리지 않으니 별칭의 내용을 적는다.
-#   SB_CLAUDE_CMD="claude --dangerously-skip-permissions"
+#   SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
 # 저장 위치: ${SB_FILE:-~/.local/share/session-bookmark/bookmarks.jsonl}
 
 emulate -L zsh
@@ -154,7 +154,7 @@ cmd_go() {
     if [[ -d $cwd ]]; then
       cd $cwd
     else
-      # 세션은 ID 로 찾으므로 어느 폴더에서든 열린다(Claude 2.1.312 실측). 폴더는 이어서 작업할 곳만 정한다.
+      # 세션은 ID 로 찾으므로 어느 폴더에서든 열린다(Claude Code 2.1.312 에서 확인). 폴더는 이어서 작업할 곳만 정한다.
       print -u2 "sb: 세션을 연 폴더가 없습니다: ${cwd/#$HOME\//~/}"
       print -u2 "sb: 빈 폴더를 만들면 대화는 이어지지만, 코드와 git 은 없습니다."
       local ans
@@ -218,7 +218,7 @@ save_bookmark() { # provider id name cwd memo
   mv $tmp $SB_FILE
 }
 
-# sb 로 세션에 들어간 시각을 남긴다. 나중에 오래 안 쓴 북마크를 가르는 기준으로 쓴다.
+# sb 로 세션에 들어간 시각을 남긴다.
 touch_bookmark() {
   local tmp=$(mktemp)
   jq -c --arg id "$1" --arg at "$(now)" \

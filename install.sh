@@ -71,7 +71,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || true
 if [ -n "$script_dir" ] && [ -f "$script_dir/bin/sb" ]; then
   SRC="$script_dir"
 else
-  case "$REPO" in OWNER/*) die "SB_REPO 가 정해지지 않았습니다. 저장소를 받은 폴더에서 ./install.sh 를 실행하세요." ;; esac
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
   info "내려받는 중: github.com/$REPO ($BRANCH)"
@@ -124,8 +123,8 @@ if [ ! -f "$CONFIG_DIR/config" ]; then
 # 세션에 들어갈 때 쓸 명령입니다. 비워 두면 claude / codex 를 그대로 씁니다.
 # 셸 별칭은 풀리지 않습니다. 별칭 이름 대신 별칭의 내용을 적으세요.
 #
-# SB_CLAUDE_CMD="claude --dangerously-skip-permissions"
-# SB_CODEX_CMD="codex -s workspace-write -a on-request"
+# SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
+# SB_CODEX_CMD="codex --search"
 EOF
   ok "설정 파일 예시: $CONFIG_DIR/config"
 else
