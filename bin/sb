@@ -104,11 +104,11 @@ cmd_preview() {
   local b=$(get_bookmark "$1")
   [[ -n $b ]] || { print "(북마크 없음)"; return }
   local provider=$(jq -r .provider <<< $b) cwd=$(jq -r '.cwd // ""' <<< $b)
-  jq -r '
+  jq -r --arg home "$HOME" '
     "이름      \(.name)",
     "provider  \(.provider)",
     "세션 ID   \(.session_id)",
-    "작업 경로 \(.cwd // "-")",
+    "작업 경로 \(.cwd // "-" | if startswith($home + "/") then "~" + .[($home | length):] else . end)",
     "북마크일  \(.created_at)",
     "",
     "메모",
@@ -146,7 +146,7 @@ cmd_go() {
       cd $cwd
     else
       # 세션은 ID 로 찾으므로 어느 폴더에서든 열린다(Claude 2.1.312 실측). 폴더는 이어서 작업할 곳만 정한다.
-      print -u2 "sb: 세션을 연 폴더가 없습니다: $cwd"
+      print -u2 "sb: 세션을 연 폴더가 없습니다: ${cwd/#$HOME\//~/}"
       print -u2 "sb: 빈 폴더를 만들면 대화는 이어지지만, 코드와 git 은 없습니다."
       local ans
       if read -q "ans?빈 폴더를 만들고 열까요? (N 이면 현재 폴더에서 엽니다) [y/N] " < /dev/tty; then
@@ -159,7 +159,7 @@ cmd_go() {
     fi
   fi
   local cmd=$(resume_cmd $provider $1)
-  print -u2 "→ ($PWD) $cmd"
+  print -u2 "→ (${PWD/#$HOME\//~/}) $cmd"
   # 명령 문자열을 셸 규칙대로 낱말로 나눠(따옴표 포함) 실행한다.
   exec ${(Q)${(z)cmd}}
 }

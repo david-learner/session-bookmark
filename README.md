@@ -31,6 +31,27 @@ cd session-bookmark && ./install.sh
 
 ## 쓰는 법
 
+### 한눈에 보기
+
+북마크는 **세션 안에서** 스킬로 하고, 다시 들어가기는 **터미널에서** `sb` 로 합니다.
+
+```mermaid
+flowchart LR
+  subgraph S1["Claude Code · Codex 세션 안"]
+    A["💡 새 세션에서<br/>아이디어 논의"] --> B["/session-bookmark 메모<br/>지금 세션을 북마크"]
+  end
+  B --> C["세션 닫기"]
+  C -. "며칠 뒤" .-> D
+  subgraph S2["터미널"]
+    D["sb<br/>북마크 목록 열기"] --> E["목록에서 고르고<br/>enter"]
+  end
+  E --> F["그 세션을 연 폴더로 이동해<br/>같은 대화를 이어 감"]
+```
+
+`sb` 화면은 이렇게 생겼습니다. 위는 북마크 목록, 아래는 고른 북마크의 상세입니다. 글자를 치면 목록이 걸러집니다.
+
+![sb 시연: 목록을 열고, 위아래로 옮기며 상세를 보고, 걸러서 고른 뒤 enter 로 세션에 들어간다](docs/demo.gif)
+
 ### 북마크 추가 — 세션 안에서 스킬로
 
 세션 안에서 스킬을 부르면 지금 세션이 북마크됩니다. 이름은 에이전트가 대화 주제로 짓습니다.
@@ -107,6 +128,16 @@ SB_CODEX_CMD="codex -s workspace-write -a on-request"
 
 ```json
 {"provider":"claude","name":"결제 흐름 논의","session_id":"0957a7cc-…","cwd":"/Users/me/project","created_at":"2026-10-29 14:12","memo":"내일 이어서"}
+```
+
+## 시연 GIF 다시 만들기
+
+`sb` 화면이 바뀌면 GIF 도 다시 만드세요. 시연은 가짜 홈 폴더(`/tmp/sb-demo`)에서 돌아 실제 북마크를 쓰지 않습니다.
+
+```bash
+brew install vhs
+brew install --cask font-d2coding   # 한글 고정폭 글꼴
+vhs demo/demo.tape                  # docs/demo.gif 를 새로 만든다
 ```
 
 ## 라이선스
