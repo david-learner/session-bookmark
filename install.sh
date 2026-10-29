@@ -134,11 +134,14 @@ if [ ! -f "$CONFIG_DIR/config" ]; then
   if [ "$SB_LANG" = ko ]; then
     cat > "$CONFIG_DIR/config" <<'EOF'
 # sb(session bookmark) 설정
-# 세션에 들어갈 때 쓸 명령입니다. 비워 두면 claude / codex 를 그대로 씁니다.
+# 세션에 들어갈 때 쓸 명령입니다. 비워 두면 모든 권한을 허용하는 명령을 씁니다.
+#   claude --dangerously-skip-permissions
+#   codex --dangerously-bypass-approvals-and-sandbox
+# 권한을 묻게 하려면 아래 두 줄의 # 을 지우세요.
 # 셸 별칭은 풀리지 않습니다. 별칭 이름 대신 별칭의 내용을 적으세요.
 #
-# SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
-# SB_CODEX_CMD="codex --search"
+# SB_CLAUDE_CMD="claude"
+# SB_CODEX_CMD="codex"
 #
 # 화면 언어(ko|en). 비워 두면 로캘이 한국어일 때만 한국어로 보입니다.
 SB_LANG=ko
@@ -146,11 +149,14 @@ EOF
   else
     cat > "$CONFIG_DIR/config" <<'EOF'
 # sb (session bookmark) config
-# Commands used to resume a session. Leave empty to use claude / codex as is.
+# Commands used to resume a session. If empty, commands that allow everything are used:
+#   claude --dangerously-skip-permissions
+#   codex --dangerously-bypass-approvals-and-sandbox
+# To be asked for permissions, uncomment the two lines below.
 # Shell aliases are not expanded. Write what the alias expands to, not its name.
 #
-# SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
-# SB_CODEX_CMD="codex --search"
+# SB_CLAUDE_CMD="claude"
+# SB_CODEX_CMD="codex"
 #
 # Screen language (ko|en). If empty, Korean is used only for a Korean locale.
 SB_LANG=en

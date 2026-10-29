@@ -108,11 +108,15 @@ sb help
 
 ## 설정
 
-`~/.config/session-bookmark/config` 에 세션 진입 명령을 적습니다. 비워 두면 `claude`·`codex` 를 그대로 씁니다.
+`~/.config/session-bookmark/config` 에 세션 진입 명령을 적습니다.
+
+> ⚠️ **기본값으로 `sb` 는 모든 권한을 허용한 채 세션에 들어갑니다.**
+> Claude Code 는 `--dangerously-skip-permissions`, Codex 는 `--dangerously-bypass-approvals-and-sandbox`(확인 창 없음, 샌드박스 없음)로 엽니다.
+> 에이전트가 묻지 않고 파일을 고치고 명령을 실행합니다. 권한을 묻게 하려면 이 옵션 없이 적으세요.
 
 ```bash
-SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
-SB_CODEX_CMD="codex --search"
+SB_CLAUDE_CMD="claude"
+SB_CODEX_CMD="codex"
 SB_LANG=ko
 ```
 
@@ -121,8 +125,8 @@ SB_LANG=ko
 
 | 환경 변수 | 뜻 | 기본값 |
 |---|---|---|
-| `SB_CLAUDE_CMD` | Claude 세션 진입 명령 | `claude` |
-| `SB_CODEX_CMD` | Codex 세션 진입 명령 | `codex` |
+| `SB_CLAUDE_CMD` | Claude 세션 진입 명령 | `claude --dangerously-skip-permissions` |
+| `SB_CODEX_CMD` | Codex 세션 진입 명령 | `codex --dangerously-bypass-approvals-and-sandbox` |
 | `SB_LANG` | 화면 언어: `ko` 또는 `en` | 로캘이 한국어면 `ko`, 아니면 `en` |
 | `SB_FILE` | 북마크 파일 | `~/.local/share/session-bookmark/bookmarks.jsonl` |
 | `SB_CONFIG` | 설정 파일 | `~/.config/session-bookmark/config` |

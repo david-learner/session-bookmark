@@ -108,11 +108,15 @@ In a folder it has not opened before, Claude Code first asks "Yes, I trust this 
 
 ## Configuration
 
-Write the resume commands in `~/.config/session-bookmark/config`. If you leave them empty, `sb` uses `claude` and `codex` as is.
+Write the resume commands in `~/.config/session-bookmark/config`.
+
+> ⚠️ **By default, `sb` resumes sessions with every permission allowed.**
+> Claude Code runs with `--dangerously-skip-permissions`, and Codex with `--dangerously-bypass-approvals-and-sandbox` (no approval prompts, no sandbox).
+> The agent can edit files and run commands without asking. To be asked for permissions, set the commands without these flags:
 
 ```bash
-SB_CLAUDE_CMD="claude --permission-mode acceptEdits"
-SB_CODEX_CMD="codex --search"
+SB_CLAUDE_CMD="claude"
+SB_CODEX_CMD="codex"
 SB_LANG=en
 ```
 
@@ -121,8 +125,8 @@ SB_LANG=en
 
 | Environment variable | Meaning | Default |
 |---|---|---|
-| `SB_CLAUDE_CMD` | Command to resume a Claude session | `claude` |
-| `SB_CODEX_CMD` | Command to resume a Codex session | `codex` |
+| `SB_CLAUDE_CMD` | Command to resume a Claude session | `claude --dangerously-skip-permissions` |
+| `SB_CODEX_CMD` | Command to resume a Codex session | `codex --dangerously-bypass-approvals-and-sandbox` |
 | `SB_LANG` | Screen language: `en` or `ko` | `ko` for a Korean locale, otherwise `en` |
 | `SB_FILE` | Bookmark file | `~/.local/share/session-bookmark/bookmarks.jsonl` |
 | `SB_CONFIG` | Config file | `~/.config/session-bookmark/config` |

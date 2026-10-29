@@ -13,8 +13,9 @@ SB_CONFIG=${SB_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/session-bookmark/config
 () {
   local env_claude=${SB_CLAUDE_CMD-} env_codex=${SB_CODEX_CMD-} env_lang=${SB_LANG-}
   [[ -f $SB_CONFIG ]] && source $SB_CONFIG
-  SB_CLAUDE_CMD=${env_claude:-${SB_CLAUDE_CMD:-claude}}
-  SB_CODEX_CMD=${env_codex:-${SB_CODEX_CMD:-codex}}
+  # 기본값은 모든 권한 허용이다. 권한을 묻게 하려면 설정에 claude·codex 만 적는다.
+  SB_CLAUDE_CMD=${env_claude:-${SB_CLAUDE_CMD:-claude --dangerously-skip-permissions}}
+  SB_CODEX_CMD=${env_codex:-${SB_CODEX_CMD:-codex --dangerously-bypass-approvals-and-sandbox}}
   SB_LANG=${env_lang:-${SB_LANG:-}}
 }
 
@@ -334,8 +335,10 @@ sb — Claude Code / Codex 세션을 북마크해 두고 골라서 다시 들어
   sb go <session-id> 해당 북마크 세션으로 바로 진입
 
 설정: ~/.config/session-bookmark/config
-  SB_CLAUDE_CMD="claude --permission-mode acceptEdits"   진입 명령 (별칭 이름은 안 됨)
-  SB_CODEX_CMD="codex --search"
+  진입 명령 기본값은 모든 권한 허용입니다:
+    claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox
+  SB_CLAUDE_CMD="claude"   권한을 묻게 하려면 (별칭 이름은 안 됨)
+  SB_CODEX_CMD="codex"
   SB_LANG=ko                                             화면 언어 (ko|en)
 EOF
   else
@@ -349,8 +352,10 @@ sb — bookmark Claude Code / Codex sessions and jump back into them.
   sb go <session-id> Resume that bookmarked session directly
 
 Config: ~/.config/session-bookmark/config
-  SB_CLAUDE_CMD="claude --permission-mode acceptEdits"   resume command (no alias names)
-  SB_CODEX_CMD="codex --search"
+  Resume commands allow everything by default:
+    claude --dangerously-skip-permissions, codex --dangerously-bypass-approvals-and-sandbox
+  SB_CLAUDE_CMD="claude"   to be asked for permissions (no alias names)
+  SB_CODEX_CMD="codex"
   SB_LANG=en                                             screen language (ko|en)
 EOF
   fi
