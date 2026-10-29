@@ -1,35 +1,36 @@
 ---
 name: session-bookmark
-description: 지금 이 Codex 세션을 세션 북마크(sb)에 추가한다. 이름과 메모는 대화 내용을 보고 지어 넣는다. "이 세션 북마크해줘", "북마크 추가", "세션 저장해 둬", "나중에 이어서 할게", "$session-bookmark" 같은 요청에 사용한다. 북마크 목록 보기·진입·제거는 사용자가 터미널에서 `sb` 로 직접 한다.
+description: Add the current Codex session to the session bookmarks (sb). The agent names the bookmark after the conversation. Use for requests like "bookmark this session", "save this session for later", "I'll continue this later", "$session-bookmark", or in Korean "이 세션 북마크해줘", "북마크 추가", "세션 저장해 둬", "나중에 이어서 할게". Listing, resuming and deleting bookmarks are done by the user with `sb` in a terminal.
 ---
 
-# 현재 세션을 북마크에 추가
+# Bookmark the current session
 
-`sb` 명령으로 지금 세션을 북마크에 넣는다. 사용자는 나중에 `sb` 목록에서 골라 이 세션으로 돌아온다.
+Add the current session to the bookmarks with the `sb` command. Later, the user picks it from the `sb` list and comes back to this session.
 
-## 절차
+## Steps
 
-1. 세션 ID 를 확인하세요. `$CODEX_THREAD_ID` 에 들어 있고, 비어 있으면 `$CODEX_SESSION_ID` 를 보세요. 둘 다 비어 있으면 멈추고 그 사실을 알리세요. 가장 최근 세션 파일로 대신하지 마세요. 다른 세션일 수 있습니다.
-2. 이름을 지으세요. 이 대화의 주제를 30자 안팎으로 쓰세요. 티켓 키가 있으면 앞에 붙이세요. 예: `PROJ-123 결제 흐름 논의`
-3. 메모를 정하세요. **스킬을 부를 때 함께 적은 글이 곧 메모입니다.**
-   - 적은 글이 있으면 **고치지 말고 그대로** 메모로 쓰세요. 요약·보충하지 마세요.
-   - 적은 글이 없으면 메모를 쓰지 마세요. 아래 명령에서 `-m` 을 통째로 빼세요.
-4. 아래 명령을 실행하세요. `</dev/null` 을 빼지 마세요. 빼면 `sb` 가 이름·메모를 다시 물으며 멈춥니다.
-   - 적은 글이 있을 때:
+1. Get the session ID from `$CODEX_THREAD_ID`. If it is empty, use `$CODEX_SESSION_ID`. If both are empty, stop and tell the user. Do not use the most recent session file instead. It may be a different session.
+2. Name the bookmark. Describe the conversation topic in about 30 characters, in the language of the conversation. If there is a ticket key, put it first. Example: `PROJ-123 payment flow discussion`
+3. Decide the memo. **The text written with the skill call is the memo.**
+   - If there is text, use it as the memo **exactly as written**. Do not summarize or add to it.
+   - If there is no text, do not write a memo. Leave out `-m` entirely in the command below.
+4. Run the command below. Do not leave out `</dev/null`. Without it, `sb` asks for the name and memo again and waits.
+   - With text:
      ```bash
-     sb add -p codex -n "<이름>" -m "$(cat <<'MEMO'
-     <적은 글 그대로>
+     sb add -p codex -n "<name>" -m "$(cat <<'MEMO'
+     <the text, unchanged>
      MEMO
      )" "${CODEX_THREAD_ID:-$CODEX_SESSION_ID}" </dev/null
      ```
-   - 적은 글이 없을 때:
+   - Without text:
      ```bash
-     sb add -p codex -n "<이름>" "${CODEX_THREAD_ID:-$CODEX_SESSION_ID}" </dev/null
+     sb add -p codex -n "<name>" "${CODEX_THREAD_ID:-$CODEX_SESSION_ID}" </dev/null
      ```
-   - 작업 경로(`-d`)는 넘기지 마세요. `sb` 가 세션 기록에서 세션을 연 폴더를 읽습니다.
-   - `~/.local/share/session-bookmark/` 에 쓰지 못한다는 오류가 나면 샌드박스 밖 쓰기 권한을 요청하세요.
-5. 출력의 `추가:` 또는 `갱신:` 줄과 저장한 이름·메모를 사용자에게 보여 주세요. 이미 북마크한 세션이면 `갱신:` 이 나오고 이름이 새 값으로 바뀝니다. 메모는 새로 적었을 때만 바뀌고, 비워 두면 기존 메모가 남습니다.
+   - Do not pass a folder (`-d`). `sb` reads the folder the session was started in from the session record.
+   - If writing to `~/.local/share/session-bookmark/` fails, request permission to write outside the sandbox.
+5. Show the user the `Added:` or `Updated:` line (`추가:` or `갱신:` in Korean), with the saved name and memo. If the session was already bookmarked, `sb` prints `Updated:` and replaces the name. The memo changes only when a new one is given. An empty memo keeps the old one.
 
-## 실패하면
+## If it fails
 
-- `sb` 가 없다고 나오면 멈추고 사용자에게 알리세요. session-bookmark 를 설치하지 않았거나, 설치 폴더가 PATH 에 없는 것입니다.
+- `no folder found in the session record` (`세션 기록에서 작업 경로를 찾지 못해`): `sb` could not find the session record, so it saved the current folder. The bookmark is still added. Tell the user that the saved folder may not be where the session started.
+- If `sb` is not found, stop and tell the user. session-bookmark is not installed, or its install folder is not on PATH.
